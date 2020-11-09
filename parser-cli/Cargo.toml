@@ -1,0 +1,17 @@
+[package]
+name = "parser-cli"
+version = "0.1.0"
+authors = ["matthieu gayon <matthieu.gayon@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+midi-parse = { path = "../midi-parse" }
+glob = "0.3.0"
+midly = { git = "https://github.com/negamartin/midly" }
+structopt = { version = "0.3", default-features = false }
+
+
+[profile.dev]
+opt-level = 3
