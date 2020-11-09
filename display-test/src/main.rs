@@ -8,7 +8,7 @@ use ndarray::{Array, Ix3, ArrayView};
 
 use iced::{
     canvas::{self, Canvas, Frame, Path, Stroke, Cursor},
-    Element, Length, Column, Point,
+    Element, Length, Column, Point, Align,
     executor, Application, Command, Settings, Rectangle, Container, Text
 };
 
@@ -82,15 +82,22 @@ impl Application for Bars {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let bars = self.data.iter().fold(
+        let bars = self.data
+            .iter()
+            .fold(
             Column::new().spacing(10),
             |column, bar| {
-                let mut abar = Bar { bar: bar.clone() };
-                column.push(abar.view())
+                let bar = Bar {bar: bar.clone()};
+                column.push(bar.view())
             }
         );
 
-        Container::new(bars)
+        let content = Column::new()
+            .align_items(Align::Center)
+            .spacing(20)
+            .push(bars);
+
+        Container::new(content)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
