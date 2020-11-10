@@ -82,15 +82,19 @@ impl Application for Bars {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let bars = self.data
+        let bars: Element<_> = self.data
             .iter()
             .fold(
             Column::new().spacing(10),
-            |column, bar| {
-                let bar = Bar {bar: bar.clone()};
-                column.push(bar.view())
-            }
-        );
+                |column, bar| {
+                    column.push(
+                        Canvas::new( Bar { bar: bar.to_owned() })
+                        .width(Length::Fill)
+                        .height(Length::Fill)
+                    )
+                }
+            )
+            .into();
 
         let content = Column::new()
             .align_items(Align::Center)
@@ -109,21 +113,14 @@ struct Bar {
     bar: Array<f32, Ix3>
 }
 
-impl Bar {
-    pub fn view<'a>(&'a mut self) -> Element<'a, Message> {
-        Canvas::new(self)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
-    }
-}
 
-impl<'a> canvas::Program<Message> for Bar {
+impl canvas::Program<Message> for Bar {
     fn draw(
         &self,
         bounds: Rectangle,
         _cursor: Cursor,
     ) -> Vec<canvas::Geometry> {
+        let bar = &self.bar;
 
         let mut frame = Frame::new(bounds.size());
 
