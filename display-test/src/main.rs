@@ -1,19 +1,18 @@
-use structopt::StructOpt;
-use std::fs;
-use midly::Smf;
-use midi_parse::parse::filter_beat;
 use midi_parse::datatypes::DrumTrack;
-use midi_parse::map::{process_track_pool, RESOLUTION, NUMBER_OF_TRACKS};
-use ndarray::{Array, Ix3, ArrayView};
+use midi_parse::map::{process_track_pool, NUMBER_OF_TRACKS, RESOLUTION};
+use midi_parse::parse::filter_beat;
+use midly::Smf;
+use ndarray::{Array, ArrayView, Ix3, Ix2, Ix1};
+use std::fs;
+use structopt::StructOpt;
 
 use iced::{
-    canvas::{self, Canvas, Frame, Path, Stroke, Cursor},
-    Element, Length, Column, Point, Align,
-    executor, Application, Command, Settings, Rectangle, Container, Text
+    canvas::{self, Canvas, Cursor, Frame, Path, Stroke },
+    executor, scrollable, Align, Application, Column, Command, Container, Element, Length, Point,
+    Rectangle, Scrollable, Settings, Size, Color
 };
 
-
- /* Run this program to display the parsed content of ONE file, no more */
+/* Run this program to display the parsed content of ONE file, no more */
 
 // parse args in a clean struct
 #[derive(Debug, StructOpt)]
@@ -40,8 +39,8 @@ fn get_midi_data() -> Vec<Array<f32, Ix3>> {
     // read SMF file
     let data = fs::read(&opt.input).expect(&file_input_error_message);
     // parse midi data
-    let track_pool: Vec<DrumTrack> = filter_beat(Smf::parse(&data)
-        .expect("could not parse SMF data"));
+    let track_pool: Vec<DrumTrack> =
+        filter_beat(Smf::parse(&data).expect("could not parse SMF data"));
     // get ndarray version
     process_track_pool(&track_pool)
         .expect("Failed to cast tracks into ndarray 4")
@@ -50,13 +49,15 @@ fn get_midi_data() -> Vec<Array<f32, Ix3>> {
         .collect()
 }
 
+const CANVAS_WIDTH: u16 = 900;
+const CANVAS_HEIGHT: u16 = 300;
+
 #[derive(Debug)]
-enum Message {
-    AddBar
-}
+enum Message {}
 
 struct Bars {
     data: Vec<Array<f32, Ix3>>,
+    scroll: scrollable::State,
 }
 
 impl Application for Bars {
@@ -68,6 +69,7 @@ impl Application for Bars {
         (
             Bars {
                 data: get_midi_data(),
+                scroll: scrollable::State::new(),
             },
             Command::none(),
         )
@@ -82,26 +84,31 @@ impl Application for Bars {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let bars: Element<_> = self.data
+        let bars: Element<_> = self
+            .data
             .iter()
             .fold(
-            Column::new().spacing(10),
+                Column::new()
+                    .padding(20)
+                    .spacing(20)
+                    .align_items(Align::Center),
                 |column, bar| {
                     column.push(
-                        Canvas::new( Bar { bar: bar.to_owned() })
-                        .width(Length::Fill)
-                        .height(Length::Fill)
+                        Canvas::new(Bar {
+                            bar: bar.to_owned(),
+                        })
+                        .width(Length::Units(CANVAS_WIDTH))
+                        .height(Length::Units(CANVAS_HEIGHT)),
                     )
-                }
+                },
             )
             .into();
 
-        let content = Column::new()
-            .align_items(Align::Center)
-            .spacing(20)
-            .push(bars);
+        let scrollable: Element<_> = Scrollable::new(&mut self.scroll)
+            .push(Container::new(bars).width(Length::Fill).center_x())
+            .into();
 
-        Container::new(content)
+        Container::new(scrollable)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
@@ -110,22 +117,59 @@ impl Application for Bars {
 
 #[derive(Debug)]
 struct Bar {
-    bar: Array<f32, Ix3>
+    bar: Array<f32, Ix3>,
 }
 
-
 impl canvas::Program<Message> for Bar {
-    fn draw(
-        &self,
-        bounds: Rectangle,
-        _cursor: Cursor,
-    ) -> Vec<canvas::Geometry> {
+    fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<canvas::Geometry> {
         let bar = &self.bar;
-
         let mut frame = Frame::new(bounds.size());
 
-        let line = Path::line(Point::ORIGIN, Point::new(40.0, 0.0));
-        frame.stroke(&line, Stroke::default().with_width(2.0));
+        const STEP_WIDTH: f32 = CANVAS_WIDTH as f32 / RESOLUTION as f32;
+        const STEP_HEIGHT: f32 = CANVAS_HEIGHT as f32 / NUMBER_OF_TRACKS as f32;
+        const STEP_PADDING_Y: f32 = 1.5;
+        const EVENT_WIDTH: f32 = STEP_WIDTH / 3.0;
+
+        let grid = Path::new(|p| {
+            for track_index in 0..NUMBER_OF_TRACKS + 1 {
+                let y: f32 = STEP_HEIGHT * track_index as f32;
+                p.move_to(Point::new(0.0, y));
+                p.line_to(Point::new(CANVAS_WIDTH as f32, y));
+            }
+
+            for step_index in 0..RESOLUTION + 1 {
+                let x: f32 = STEP_WIDTH * step_index as f32;
+                p.move_to(Point::new(x, 0.0));
+                p.line_to(Point::new(x, CANVAS_HEIGHT as f32));
+            }
+        });
+
+        // let line = Path::line(Point::ORIGIN, Point::new(40.0, 0.0));
+        frame.stroke(&grid, Stroke::default().with_width(1.0));
+
+        bar.outer_iter().enumerate().for_each(|(step_index, arr2)| {    
+            arr2.outer_iter().rev().enumerate().for_each(|(track_index, arr1)| {
+                match arr1.as_slice() {
+                    Some(step) => {
+                        let offset = step[0];
+                        let velocity = step[1];
+
+                        if velocity > 0.0 {
+                            // println!("track_index {} step_index {} velocity {} offset {}", track_index, step_index, velocity, offset);
+
+                            let origin = Point::new(
+                                (step_index as f32 + offset) * STEP_WIDTH,
+                                track_index as f32 * STEP_HEIGHT + STEP_PADDING_Y
+                            );
+    
+                            let step = Path::rectangle(origin, Size::new(EVENT_WIDTH, STEP_HEIGHT - 2.0 * STEP_PADDING_Y));
+                            frame.fill(&step, Color::from_rgba(2.0/255.0, 221.0/255.0, 103.0/255.0, (velocity * 0.5) + 0.4));
+                        }
+                    }
+                    None => println!("!PANIC"),
+                }
+            });
+        }); 
 
         vec![frame.into_geometry()]
     }
