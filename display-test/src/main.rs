@@ -2,7 +2,7 @@ use midi_parse::datatypes::DrumTrack;
 use midi_parse::map::{process_track_pool, NUMBER_OF_TRACKS, RESOLUTION};
 use midi_parse::parse::filter_beat;
 use midly::Smf;
-use ndarray::{Array, ArrayView, Ix3, Ix2, Ix1};
+use ndarray::{Array, ArrayView, Ix3};
 use std::fs;
 use structopt::StructOpt;
 
@@ -50,7 +50,7 @@ fn get_midi_data() -> Vec<Array<f32, Ix3>> {
 }
 
 const CANVAS_WIDTH: u16 = 900;
-const CANVAS_HEIGHT: u16 = 300;
+const CANVAS_HEIGHT: u16 = 240;
 
 #[derive(Debug)]
 enum Message {}
@@ -130,22 +130,50 @@ impl canvas::Program<Message> for Bar {
         const STEP_PADDING_Y: f32 = 1.5;
         const EVENT_WIDTH: f32 = STEP_WIDTH / 3.0;
 
-        let grid = Path::new(|p| {
-            for track_index in 0..NUMBER_OF_TRACKS + 1 {
-                let y: f32 = STEP_HEIGHT * track_index as f32;
-                p.move_to(Point::new(0.0, y));
-                p.line_to(Point::new(CANVAS_WIDTH as f32, y));
-            }
 
-            for step_index in 0..RESOLUTION + 1 {
-                let x: f32 = STEP_WIDTH * step_index as f32;
-                p.move_to(Point::new(x, 0.0));
-                p.line_to(Point::new(x, CANVAS_HEIGHT as f32));
-            }
-        });
+        for track_index in 0..NUMBER_OF_TRACKS + 1 {
+            let y: f32 = STEP_HEIGHT * track_index as f32;
+            let line_h = Path::line(Point::new(0.0, y), Point::new(CANVAS_WIDTH as f32, y));
 
-        // let line = Path::line(Point::ORIGIN, Point::new(40.0, 0.0));
-        frame.stroke(&grid, Stroke::default().with_width(1.0));
+            if (track_index) % 2 == 0 {
+                frame.stroke(&line_h, 
+                    Stroke::default()
+                        .with_width(1.2)
+                        .with_color(Color::from_rgba(0.2, 0.2, 0.2, 1.0))
+                );
+            } else {
+                frame.stroke(&line_h, 
+                    Stroke::default()
+                        .with_width(0.5)
+                        .with_color(Color::from_rgba(0.2, 0.2, 0.2, 0.8))
+                );
+            }
+        }
+
+        for step_index in 0..RESOLUTION + 1 {
+            let x: f32 = STEP_WIDTH * step_index as f32 ;
+            let line_v = Path::line(Point::new(x, 0.0), Point::new(x, CANVAS_HEIGHT as f32));
+           
+            if (step_index) % 8 == 0 {
+                frame.stroke(&line_v, 
+                    Stroke::default()
+                        .with_width(2.0)
+                        .with_color(Color::from_rgba(0.0, 0.0, 0.0, 0.9))
+                );
+            } else if (step_index) % 4 == 0 {
+                frame.stroke(&line_v, 
+                    Stroke::default()
+                        .with_width(2.0)
+                        .with_color(Color::from_rgba(0.1, 0.1, 0.1, 0.8))
+                );
+            } else {
+                frame.stroke(&line_v, 
+                    Stroke::default()
+                        .with_width(1.0)
+                        .with_color(Color::from_rgba(0.2, 0.2, 0.2, 0.5))
+                );
+            }
+        }
 
         bar.outer_iter().enumerate().for_each(|(step_index, arr2)| {    
             arr2.outer_iter().rev().enumerate().for_each(|(track_index, arr1)| {

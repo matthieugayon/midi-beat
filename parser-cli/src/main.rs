@@ -2,12 +2,12 @@ use glob::glob_with;
 use midly::Smf;
 use std::{fs, time::Instant};
 use structopt::StructOpt;
-// use std::collections::BTreeMap;
+use std::collections::BTreeMap;
 use glob::MatchOptions;
 
 use midi_parse::parse::filter_beat;
 use midi_parse::datatypes::DrumTrack;
-// use stats::{fill_stats, display_stats};
+use midi_parse::stats::{fill_stats, display_stats};
 use midi_parse::map::process_track_pool;
 
 // parse args in a clean struct
@@ -33,10 +33,10 @@ fn main() {
     let mut counter: u32 = 0;
 
     // for stats 
-    // let mut key_map: BTreeMap<u8, u64> = BTreeMap::new();
-    // let mut ts_map: BTreeMap<(u8, u8, u8, u8), u64> = BTreeMap::new();
-    // let count: u64 = 1;
-    // let ts_count: u64 = 1;
+    let mut key_map: BTreeMap<u8, u64> = BTreeMap::new();
+    let mut ts_map: BTreeMap<(u8, u8, u8, u8), u64> = BTreeMap::new();
+    let count: u64 = 1;
+    let ts_count: u64 = 1;
 
     // track pool
     let mut track_pool: Vec<DrumTrack> = Vec::new();
@@ -55,7 +55,7 @@ fn main() {
                         match Smf::parse(&data) {
                             Ok(smf) => {
                                 let mut tracks = filter_beat(smf);
-                                // fill_stats(&tracks, count, &mut key_map, ts_count, &mut ts_map);
+                                fill_stats(&tracks, count, &mut key_map, ts_count, &mut ts_map);
                                 track_pool.append(&mut tracks);
                             }
                             Err(e) => {
@@ -74,6 +74,8 @@ fn main() {
             println!("Pattern error: {}", e);
         }
     }
+
+    display_stats(&key_map, &ts_map, counter);
 
     match process_track_pool(&track_pool) {
         Ok(_array) => {

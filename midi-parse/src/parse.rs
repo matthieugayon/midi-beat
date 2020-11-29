@@ -24,13 +24,19 @@ pub fn filter_beat(smf: Smf) -> Vec<DrumTrack> {
     midly::Timing::Timecode(_, _) => {}
   }
 
+  println!("number of tracks {:?}", smf.tracks.iter().len());
+
   // keeping and filtering tracks with channel 9 events
   let tracks: Vec<DrumTrack> = smf.tracks.iter()
     .filter(|track| track_has_beat_event(track))
     .map(|track| filter_beat_events(track, ppqn))
     .collect();
 
+  println!("number of tracks after first filtering {:?}", tracks.iter().len());
+
   let unique_time_signature = get_unique_time_signature(&tracks);
+
+  println!("unique_time_signature {:?}", unique_time_signature);
 
   // call merge_same_signature_tracks with tracks featuring same time_signature
   let merged_drum_tracks: Vec<DrumTrack> = unique_time_signature

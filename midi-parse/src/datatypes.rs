@@ -83,7 +83,7 @@ impl DrumTrack {
     bar_tick_duration / RESOLUTION
   }
 
-  pub fn to_grid(&self, perc_map: &Vec<Option<u8>>) -> Vec<Vec<Vec<Vec<f32>>>> {
+  pub fn to_grid(&self, perc_map: &Vec<Option<u8>>) -> Vec<[[[f32; 2]; 10]; RESOLUTION]> {
     let unwrapped_perc_map: Vec<u8> = perc_map
       .iter()
       .map(|option_key| match option_key {
@@ -95,21 +95,22 @@ impl DrumTrack {
     // duration of a step (bar / RESOLUTION) in ticks  
     let step_tick_duration = self.get_step_track_duration();
     // minimum of distance between 2 events on a same step
-    let minimum_distance = step_tick_duration / 10;
+    let minimum_distance: f32 = 0.05;
 
     // last event of the track, since track is already sorted, this gives us the length of our grid vector
     let last_event: &Drum = self.events.last().unwrap();
     let (event_len, _): (usize, usize) = self.get_step_index_offset_tuple(last_event, step_tick_duration);
+    let safe_len = event_len + 1;
 
     // calculate grid len in multiples of RESOLUTION
-    let mut bars_number = event_len / RESOLUTION;
-    if event_len % RESOLUTION > 0 {
+    let mut bars_number = safe_len / RESOLUTION;
+    if safe_len % RESOLUTION > 0 {
       bars_number += 1
     }
     let grid_len = bars_number * RESOLUTION;
     
     // data structure to be filled from track events
-    let mut grid: Vec<[Option<[isize; 2]>; 10]> = vec![[None; 10]; grid_len];
+    let mut grid: Vec<[[f32; 2]; 10]> = vec![[[0., 0.]; 10]; grid_len];
 
     // parsing and filling the grid 
     self.events
@@ -118,45 +119,73 @@ impl DrumTrack {
       .for_each(|drum| {
         let perc_index  = unwrapped_perc_map.iter().position(|&key| key == drum.key).unwrap();
         let (grid_index, offset) = self.get_step_index_offset_tuple(drum, step_tick_duration);  
-        let event_payload = Some([offset as isize, drum.velocity as isize]);
+        let event_payload = [
+          normalize_offset(offset as isize, step_tick_duration),
+          normalize_velocity(drum.velocity as usize)
+        ];
 
-        match &grid[grid_index][perc_index] {
-          Some(event) => {
-            if event[0] < 0 { 
-              grid[grid_index][perc_index] = event_payload;
-            } else if offset > 0 && offset as isize - event[0] > minimum_distance as isize && grid_index < grid_len - 1 {
-              match grid[grid_index + 1][perc_index] {
-                None => grid[grid_index + 1][perc_index] = Some([offset as isize - step_tick_duration as isize, drum.velocity as isize]),
-                _ => {}
+        if grid_index < grid_len - 1 {
+          match &grid[grid_index][perc_index] {
+            [0., 0.] => grid[grid_index][perc_index] = event_payload,
+            _ => {
+              let event = &grid[grid_index][perc_index];
+              if event[0] < 0. { 
+                grid[grid_index][perc_index] = event_payload;
+              } else if offset > 0 && event_payload[0] - event[0] > minimum_distance && grid_index < grid_len - 1 {
+                match grid[grid_index + 1][perc_index] {
+                  [0., 0.] => {
+                    grid[grid_index + 1][perc_index] = [
+                      event_payload[0] - 1.,
+                      event_payload[1]
+                    ]
+                  },
+                  _ => {}
+                }
               }
-            }
-          },
-          None => grid[grid_index][perc_index] = event_payload
+            },
+          }
         }
       });
 
     grid[..]
       .chunks_exact(RESOLUTION as usize)
-      .unique()
-      .map(|chunk| {
+      .map(|chunk: &[[[f32; 2]; 10]]| {
+        let mut bar = [[[0. as f32; 2]; 10]; RESOLUTION];
         chunk
           .iter()
-          .map(|&step| {
+          .enumerate()
+          .for_each(|(step_index, step)| {
             step
               .iter()
-              .map(|option_perc| match option_perc {
-                  Some(step_payload) => {
-                    return vec![
-                      normalize_offset(step_payload[0], step_tick_duration),
-                      normalize_velocity(step_payload[1] as usize)
-                    ]
-                  },
-                  None => return vec![0., 0.]
+              .enumerate()
+              .for_each(|(perc_index, event)| {
+                bar[step_index][perc_index] = *event;
               })
-              .collect()
-          })
-          .collect()
+          });
+        bar
       })
+      // .unique()
+      // .map(|chunk| {
+      //   chunk
+      //     .iter()
+      //     .map(|&step| {
+      //       step
+      //         .iter()
+      //         .map(|option_perc| match option_perc {
+      //             Some(step_payload) => {
+      //               return vec![
+      //                 normalize_offset(step_payload[0], step_tick_duration),
+      //                 normalize_velocity(step_payload[1] as usize)
+      //               ]
+      //             },
+      //             None => return vec![0., 0.]
+      //         })
+      //         .collect()
+      //     })
+      //     .collect()
+
+        
+      // })
       .collect()
   }
 

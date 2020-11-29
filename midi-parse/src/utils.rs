@@ -27,7 +27,7 @@ pub fn track_has_beat_event(track: &Vec<TrackEvent>) -> bool {
 
 pub fn filter_beat_events(track: &Vec<TrackEvent>, ppqn: u16) -> DrumTrack {
   let mut delta_count: u32 = 0;
-  let mut time_signature: (u8, u8, u8, u8) = (0,0,0,0);
+  let mut time_signature: (u8, u8, u8, u8) = (4,4,0,0);
 
   let drum_events: Vec<Drum> = track.into_iter()
     .take_while(|e| {
@@ -56,6 +56,7 @@ pub fn filter_beat_events(track: &Vec<TrackEvent>, ppqn: u16) -> DrumTrack {
             midly::MetaMessage::TimeSignature(numerator, denominator, midi_clocks_per_click, notes_per_quarter) => {
               time_signature = (numerator, denominator, midi_clocks_per_click, notes_per_quarter);
               // println!("time_signature {} / {}, midi_clocks_per_click {}, notes_per_quarter {} ", numerator, denominator, midi_clocks_per_click, notes_per_quarter)
+              println!("FOUND TIME SIG {:?}", time_signature);
             }
             _  => {}
           }
@@ -66,6 +67,8 @@ pub fn filter_beat_events(track: &Vec<TrackEvent>, ppqn: u16) -> DrumTrack {
       None
     })
     .collect();
+  
+  println!("TIME SIGNATURE {:?}", time_signature);
 
   DrumTrack {
     events: drum_events,

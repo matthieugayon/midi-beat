@@ -5,3 +5,6 @@ members = [
   "midi-parse",
   "display-test"
 ]
+
+# [profile.dev]
+# opt-level = 3

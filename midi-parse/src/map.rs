@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use ndarray::{Array, Ix4, Ix3, Ix2, Ix1, ArrayView, ShapeError};
 use crate::datatypes::DrumTrack;
 use drawille::Canvas;
@@ -25,8 +26,13 @@ pub fn get_perc_map() -> [Vec<u8>; NUMBER_OF_TRACKS] {
 }
 
 pub fn process_track_pool(track_pool: &Vec<DrumTrack>) -> Result<Array<f32, Ix4>, ShapeError> {
-  let flattened_bars: Vec<Vec<Vec<Vec<f32>>>> = track_pool
+  let flattened_bars: Vec<[[[f32; 2]; 10]; RESOLUTION]> = track_pool
     .into_iter()
+    .map(|track| {
+      println!("TS : {} {}", track.time_signature.0, track.time_signature.1);
+
+      return track;
+    })
     .map(|track| (track, track.get_track_perc_map()))
     // filter tracks with less than 2 mapped percs
     .filter(|(_, track_perc_map)| {
@@ -49,15 +55,30 @@ pub fn process_track_pool(track_pool: &Vec<DrumTrack>) -> Result<Array<f32, Ix4>
     })
     // flatten everything into a vec of bars 
     .flatten()
+    .unique_by(|bar| {
+      let mut quantized_bar = [[[0 as isize; 2]; 10]; RESOLUTION];
+      bar.iter()
+        .enumerate()
+        .for_each(|(step_index, step)| {
+          step
+            .iter()
+            .enumerate()
+            .for_each(|(perc_index, event)| {
+              quantized_bar[step_index][perc_index] = [(event[0] * 256.) as isize, (event[1] * 128.) as isize];
+            })
+        });
+      quantized_bar
+    })
     .collect();
 
   let number_of_bars = flattened_bars.len();
 
   let flattened_data: Vec<f32> = flattened_bars
-    .into_iter()
+    .iter()
     .flatten()
     .flatten()
     .flatten()
+    .map(|val| *val)
     .collect();
   
   Array::from_shape_vec((number_of_bars, 32,10,2), flattened_data)
