@@ -81,7 +81,7 @@ pub fn process_track_pool(track_pool: &Vec<DrumTrack>) -> Result<Array<f32, Ix4>
     .map(|val| *val)
     .collect();
   
-  Array::from_shape_vec((number_of_bars, 32,10,2), flattened_data)
+  Array::from_shape_vec((number_of_bars, 32, 10, 2), flattened_data)
 }
 
 // old terminal display

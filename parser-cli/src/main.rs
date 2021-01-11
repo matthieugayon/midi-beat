@@ -4,10 +4,13 @@ use std::{fs, time::Instant};
 use structopt::StructOpt;
 use std::collections::BTreeMap;
 use glob::MatchOptions;
+use ndarray_npy::NpzWriter;
+use std::fs::File;
+
 
 use midi_parse::parse::filter_beat;
 use midi_parse::datatypes::DrumTrack;
-use midi_parse::stats::{fill_stats, display_stats};
+use midi_parse::stats::{fill_stats, display_stats, filter_low_densities};
 use midi_parse::map::process_track_pool;
 
 // parse args in a clean struct
@@ -17,6 +20,9 @@ struct Opt {
     /// Input path
     #[structopt(short, long)]
     input: String,
+    /// Output path
+    #[structopt(short, long)]
+    output: String,
 }
 
 fn main() {
@@ -78,8 +84,21 @@ fn main() {
     display_stats(&key_map, &ts_map, counter);
 
     match process_track_pool(&track_pool) {
-        Ok(_array) => {
-            println!("Successful cast of bars vec into Array4 =>");
+        Ok(array) => {
+            println!("Successful cast of bars vec into Array4, shape: {:?}", array.shape());
+
+            // filter densities
+            match filter_low_densities(&array) {
+                Ok(filtered) => {
+                    let mut npz = NpzWriter::new(File::create(opt.output.clone()).expect("Output path error"));
+                    npz.add_array("x", &filtered).expect("Can't write our array");
+
+                    println!("Successfully generated NPZ for path: '{}'", opt.output);
+                }
+                Err(e) => {
+                    println!("Shape error: {}", e);
+                }
+            }
         }
         Err(err) => {
             println!("Shape error: {}", err);
