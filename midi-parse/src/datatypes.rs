@@ -120,8 +120,8 @@ impl DrumTrack {
         let perc_index  = unwrapped_perc_map.iter().position(|&key| key == drum.key).unwrap();
         let (grid_index, offset) = self.get_step_index_offset_tuple(drum, step_tick_duration);  
         let event_payload = [
-          normalize_offset(offset as isize, step_tick_duration),
-          normalize_velocity(drum.velocity as usize)
+          normalize_velocity(drum.velocity as usize),
+          normalize_offset(offset as isize, step_tick_duration)
         ];
 
         if grid_index < grid_len - 1 {
@@ -129,14 +129,14 @@ impl DrumTrack {
             [0., 0.] => grid[grid_index][perc_index] = event_payload,
             _ => {
               let event = &grid[grid_index][perc_index];
-              if event[0] < 0. {
+              if event[1] < 0. {
                 grid[grid_index][perc_index] = event_payload;
-              } else if offset > 0 && event_payload[0] - event[0] > minimum_distance && grid_index < grid_len - 1 {
+              } else if offset > 0 && event_payload[1] - event[1] > minimum_distance && grid_index < grid_len - 1 {
                 match grid[grid_index + 1][perc_index] {
                   [0., 0.] => {
                     grid[grid_index + 1][perc_index] = [
-                      event_payload[0] - 1.,
-                      event_payload[1]
+                      event_payload[0],
+                      event_payload[1] - 1.
                     ]
                   },
                   _ => {}
@@ -164,28 +164,6 @@ impl DrumTrack {
           });
         bar
       })
-      // .unique()
-      // .map(|chunk| {
-      //   chunk
-      //     .iter()
-      //     .map(|&step| {
-      //       step
-      //         .iter()
-      //         .map(|option_perc| match option_perc {
-      //             Some(step_payload) => {
-      //               return vec![
-      //                 normalize_offset(step_payload[0], step_tick_duration),
-      //                 normalize_velocity(step_payload[1] as usize)
-      //               ]
-      //             },
-      //             None => return vec![0., 0.]
-      //         })
-      //         .collect()
-      //     })
-      //     .collect()
-
-        
-      // })
       .collect()
   }
 
