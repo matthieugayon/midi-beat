@@ -129,7 +129,7 @@ impl DrumTrack {
             [0., 0.] => grid[grid_index][perc_index] = event_payload,
             _ => {
               let event = &grid[grid_index][perc_index];
-              if event[0] < 0. { 
+              if event[0] < 0. {
                 grid[grid_index][perc_index] = event_payload;
               } else if offset > 0 && event_payload[0] - event[0] > minimum_distance && grid_index < grid_len - 1 {
                 match grid[grid_index + 1][perc_index] {

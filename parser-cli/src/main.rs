@@ -92,7 +92,6 @@ fn main() {
                 Ok(filtered) => {
                     let mut npz = NpzWriter::new(File::create(opt.output.clone()).expect("Output path error"));
                     npz.add_array("x", &filtered).expect("Can't write our array");
-
                     println!("Successfully generated NPZ for path: '{}'", opt.output);
                 }
                 Err(e) => {

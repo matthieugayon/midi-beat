@@ -64,7 +64,9 @@ pub fn process_track_pool(track_pool: &Vec<DrumTrack>) -> Result<Array<f32, Ix4>
             .iter()
             .enumerate()
             .for_each(|(perc_index, event)| {
-              quantized_bar[step_index][perc_index] = [(event[0] * 256.) as isize, (event[1] * 128.) as isize];
+              // juste need to reverse here because of the final ML format
+                // @WARN
+              quantized_bar[step_index][perc_index] = [(event[1] * 128.) as isize, (event[0] * 256.) as isize];
             })
         });
       quantized_bar
