@@ -179,8 +179,8 @@ impl canvas::Program<Message> for Bar {
             arr2.outer_iter().rev().enumerate().for_each(|(track_index, arr1)| {
                 match arr1.as_slice() {
                     Some(step) => {
-                        let offset = step[0];
-                        let velocity = step[1];
+                        let offset = step[1];
+                        let velocity = step[0];
 
                         if velocity > 0.0 {
                             // println!("track_index {} step_index {} velocity {} offset {}", track_index, step_index, velocity, offset);
@@ -189,9 +189,15 @@ impl canvas::Program<Message> for Bar {
                                 (step_index as f32 + offset) * STEP_WIDTH,
                                 track_index as f32 * STEP_HEIGHT + STEP_PADDING_Y
                             );
+
+                            let color = if offset > 0. {
+                                    Color::from_rgba(2.0/255.0, 221.0/255.0, 103.0/255.0, (velocity * 0.5) + 0.4)
+                                } else {
+                                    Color::from_rgba(221.0/255.0, 0./255.0, 0./255.0, (velocity * 0.5) + 0.4)
+                                };
     
                             let step = Path::rectangle(origin, Size::new(EVENT_WIDTH, STEP_HEIGHT - 2.0 * STEP_PADDING_Y));
-                            frame.fill(&step, Color::from_rgba(2.0/255.0, 221.0/255.0, 103.0/255.0, (velocity * 0.5) + 0.4));
+                            frame.fill(&step, color);
                         }
                     }
                     None => println!("!PANIC"),

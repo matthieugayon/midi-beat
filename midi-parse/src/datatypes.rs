@@ -125,24 +125,62 @@ impl DrumTrack {
         ];
 
         if grid_index < grid_len - 1 {
-          match &grid[grid_index][perc_index] {
-            [0., 0.] => grid[grid_index][perc_index] = event_payload,
-            _ => {
-              let event = &grid[grid_index][perc_index];
-              if event[1] < 0. {
-                grid[grid_index][perc_index] = event_payload;
-              } else if offset > 0 && event_payload[1] - event[1] > minimum_distance && grid_index < grid_len - 1 {
+          // so here we can check for next event 
+
+          // here we need to check if there's an event on next step already
+          if event_payload[1] > 0.5 {
+            match grid[grid_index + 1][perc_index] {
+              // there is no event on next step, we put event on next step with negative offset
+              [vel, offset] if vel == 0. && offset == 0. => {
+                grid[grid_index + 1][perc_index] = [
+                  event_payload[0],
+                  event_payload[1] - 1.
+                ]
+              },
+              [vel, _offset] => {
+                // there is an event on next step, but current event velocity is higher
+                if event_payload[0] > vel {
+                  grid[grid_index + 1][perc_index] = [
+                    event_payload[0],
+                    event_payload[1] - 1.
+                  ]
+                }
+              }
+            }
+          } else {
+            match grid[grid_index][perc_index] {
+              // there is no event on current step
+              [vel, offset] if vel == 0. && offset == 0. =>  {
+                grid[grid_index][perc_index] = event_payload
+              },
+              [vel, _offset] => {
+                // there is an event on current step, let's check next step
                 match grid[grid_index + 1][perc_index] {
-                  [0., 0.] => {
+                  // there is nothing on next step
+                  [next_vel, next_offset] if next_vel == 0. && next_offset == 0. => {
                     grid[grid_index + 1][perc_index] = [
                       event_payload[0],
                       event_payload[1] - 1.
                     ]
-                  },
-                  _ => {}
+                  }
+                  // there is something so if velociy is higher we replace it
+                  [next_vel, _next_offset] => {
+                    if event_payload[0] > next_vel {
+                      grid[grid_index + 1][perc_index] = [
+                        event_payload[0],
+                        event_payload[1] - 1.
+                      ]
+                    } else if event_payload[0] > vel {
+                      // and at last, if velocity is higher than current step event, we replace it
+                      grid[grid_index][perc_index] = [
+                        event_payload[0],
+                        event_payload[1]
+                      ]
+                    }
+                  }
                 }
               }
-            },
+            }
           }
         }
       });
