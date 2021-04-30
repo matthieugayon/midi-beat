@@ -95,7 +95,8 @@ impl DrumTrack {
     // duration of a step (bar / RESOLUTION) in ticks  
     let step_tick_duration = self.get_step_track_duration();
     // minimum of distance between 2 events on a same step
-    let minimum_distance: f32 = 0.05;
+    // let's see if we need it or not
+    // let minimum_distance: f32 = 0.05; 
 
     // last event of the track, since track is already sorted, this gives us the length of our grid vector
     let last_event: &Drum = self.events.last().unwrap();
@@ -131,19 +132,31 @@ impl DrumTrack {
           if event_payload[1] > 0.5 {
             match grid[grid_index + 1][perc_index] {
               // there is no event on next step, we put event on next step with negative offset
-              [vel, offset] if vel == 0. && offset == 0. => {
+              [next_vel, next_offset] if next_vel == 0. && next_offset == 0. => {
                 grid[grid_index + 1][perc_index] = [
                   event_payload[0],
                   event_payload[1] - 1.
                 ]
               },
-              [vel, _offset] => {
-                // there is an event on next step, but current event velocity is higher
-                if event_payload[0] > vel {
-                  grid[grid_index + 1][perc_index] = [
-                    event_payload[0],
-                    event_payload[1] - 1.
-                  ]
+              [next_vel, _next_offset] => {
+                // there is an event on next step, 
+                match grid[grid_index][perc_index] {
+                  // so there is no event on current step, so we accept an offset > 0.5
+                  [vel, offset] if vel == 0. && offset == 0. =>  {
+                    grid[grid_index][perc_index] = event_payload
+                  }
+                  [vel, _offset] => {
+                    // else we check if next event has a lower velocity
+                    if event_payload[0] > next_vel {
+                      grid[grid_index + 1][perc_index] = [
+                        event_payload[0],
+                        event_payload[1] - 1.
+                      ]
+                    } else if event_payload[0] > vel {
+                      // or if current event has a lower velocity
+                      grid[grid_index][perc_index] = event_payload
+                    }
+                  }
                 }
               }
             }
@@ -165,16 +178,17 @@ impl DrumTrack {
                   }
                   // there is something so if velociy is higher we replace it
                   [next_vel, _next_offset] => {
-                    if event_payload[0] > next_vel {
-                      grid[grid_index + 1][perc_index] = [
-                        event_payload[0],
-                        event_payload[1] - 1.
-                      ]
-                    } else if event_payload[0] > vel {
+                    if event_payload[0] > vel {
                       // and at last, if velocity is higher than current step event, we replace it
                       grid[grid_index][perc_index] = [
                         event_payload[0],
                         event_payload[1]
+                      ]
+                    } else if event_payload[0] > next_vel {
+                      // last case scenario we check if next event velocity is lower
+                      grid[grid_index + 1][perc_index] = [
+                        event_payload[0],
+                        event_payload[1] - 1.
                       ]
                     }
                   }
