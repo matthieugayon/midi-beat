@@ -9,3 +9,6 @@
 
 `cargo run --bin display-test -- -i "your/file/path"`
  
+## data filtering
+
+`cargo run --bin data-filter -- --input ~/Desktop/real_batter.npz --output ~/Desktop/filt.npz --num-samples 5000`
