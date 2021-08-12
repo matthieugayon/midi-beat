@@ -10,7 +10,7 @@ use std::fs::File;
 
 use midi_parse::parse::filter_beat;
 use midi_parse::datatypes::DrumTrack;
-use midi_parse::stats::{fill_stats, display_stats, filter_low_densities};
+use midi_parse::stats::{fill_stats, display_stats, filter_densities};
 use midi_parse::map::process_track_pool;
 
 // parse args in a clean struct
@@ -88,7 +88,7 @@ fn main() {
             println!("Successful cast of bars vec into Array4, shape: {:?}", array.shape());
 
             // filter densities
-            match filter_low_densities(&array) {
+            match filter_densities(&array) {
                 Ok(filtered) => {
                     let mut npz = NpzWriter::new(File::create(opt.output.clone()).expect("Output path error"));
                     npz.add_array("x", &filtered).expect("Can't write our array");

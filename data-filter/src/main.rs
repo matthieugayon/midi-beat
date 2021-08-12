@@ -18,6 +18,9 @@ struct Opt {
     /// Subgroup len
     #[structopt(short, long)]
     num_samples: usize,
+    /// K groups
+    #[structopt(short, long)]
+    k: usize,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -38,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // remove offsets
     let vel_only = a.slice(s![.., .., .., 0]).to_owned();
 
-    let (sample_cnt, sample_dims, k, max_iter) = (ashape[0], ashape[1] * ashape[2], 100, 100); // 100 modes
+    let (sample_cnt, sample_dims, k, max_iter) = (ashape[0], ashape[1] * ashape[2], opt.k, 50); // k modes
 
     let kmean = KMeans::new(
         vel_only.as_slice().unwrap().to_vec(),
@@ -58,11 +61,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Cluster-Assignments: {:?}", result.assignments.len());
 
     // println!("how many samples per group do we need ? {:?}", );
-    let samples_per_mode = opt.num_samples / 100;
+    let samples_per_mode = opt.num_samples / opt.k;
 
     let mut selecta : Vec<f32> = Vec::new();
 
-    for i in 0..100usize {
+    for i in 0..opt.k {
         let mut ct = 0;
 
         let mut rng = rand::thread_rng();

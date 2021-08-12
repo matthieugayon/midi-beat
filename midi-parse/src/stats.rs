@@ -71,19 +71,33 @@ pub fn display_stats(
 }
 
 #[allow(dead_code)]
-pub fn filter_low_densities(bars_array: &Array<f32, Ix4>) -> Result<Array<f32, Ix4>, ShapeError> {
+pub fn filter_densities(bars_array: &Array<f32, Ix4>) -> Result<Array<f32, Ix4>, ShapeError> {
     // pure vec with filtered results
     let mut res: Vec<f32> = vec![];
     let mut filtered_ct = 0;
 
+    let mut highest_dens = 0.0;
+    let mut accum = 0.0;
+
     for bar in bars_array.outer_iter() {
         // remove offset information to calculate density
         let vel_only = bar.slice(s![.., .., 0]);
-        if vel_only.mean().unwrap() > 0.01 {
+        let density = vel_only.mean().unwrap();
+
+        if density > 0.01 && density < 0.1 {
+
+            if density > highest_dens {
+                highest_dens = density;
+            }
+
+            accum += density;
+
             filtered_ct += 1;
             let v = bar.to_slice().unwrap();
             res.extend_from_slice(v);
         }
     }
+
+    println!("kept: {}, highest density {}, avg density {}", filtered_ct, highest_dens, accum / filtered_ct as f32);
     Array::from_shape_vec((filtered_ct, 32, 10, 2), res)
 }

@@ -29,7 +29,7 @@ pub fn process_track_pool(track_pool: &Vec<DrumTrack>) -> Result<Array<f32, Ix4>
   let flattened_bars: Vec<[[[f32; 2]; 10]; RESOLUTION]> = track_pool
     .into_iter()
     .map(|track| {
-      println!("TS : {} {}", track.time_signature.0, track.time_signature.1);
+      // println!("TS : {} {}", track.time_signature.0, track.time_signature.1);
 
       return track;
     })
