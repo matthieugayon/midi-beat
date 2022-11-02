@@ -11,4 +11,4 @@ midly = { git = "https://github.com/negamartin/midly" }
 itertools = "0.9.0"
 time_calc = "0.13.0"
 ndarray = "0.13.1"
-drawille = { git = "git://github.com/P1start/drawille-rs" }
+drawille = { git = "https://github.com/P1start/drawille-rs" }

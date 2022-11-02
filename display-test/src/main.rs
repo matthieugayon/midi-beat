@@ -40,7 +40,7 @@ fn get_midi_data() -> Vec<Array<f32, Ix3>> {
     let data = fs::read(&opt.input).expect(&file_input_error_message);
     // parse midi data
     let track_pool: Vec<DrumTrack> =
-        filter_beat(Smf::parse(&data).expect("could not parse SMF data"));
+        filter_beat(Smf::parse(&data).expect("could not parse SMF data"), true);
     // get ndarray version
     process_track_pool(&track_pool)
         .expect("Failed to cast tracks into ndarray 4")

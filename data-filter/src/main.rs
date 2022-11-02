@@ -72,10 +72,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         while ct < samples_per_mode {
             // randomly select an index
-            let mut idx: usize = rng.gen_range(0, result.assignments.len());
+            let mut idx: usize = rng.gen_range(0..=result.assignments.len());
 
             while *result.assignments.get(idx).unwrap() as usize != i {
-                idx = rng.gen_range(0, result.assignments.len());
+                idx = rng.gen_range(0..=result.assignments.len());
             }
 
             let candidate = a.index_axis(Axis(0), idx);

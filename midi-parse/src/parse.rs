@@ -11,14 +11,11 @@ use crate::utils::{
   // to_smf
 };
 
-pub fn filter_beat(smf: Smf) -> Vec<DrumTrack> {
-  // println!("Midi parsing file has {} tracks", smf.tracks.len());
-
+pub fn filter_beat(smf: Smf, drum_channel: bool) -> Vec<DrumTrack> {
   let mut ppqn: u16 = 0;
 
   match smf.header.timing {
     midly::Timing::Metrical(tpb) => {
-      // println!("Midi timing is in ticks per beat {}", tpb.as_int());
       ppqn = tpb.as_int();
     }
     midly::Timing::Timecode(_, _) => {}
@@ -28,8 +25,8 @@ pub fn filter_beat(smf: Smf) -> Vec<DrumTrack> {
 
   // keeping and filtering tracks with channel 9 events
   let tracks: Vec<DrumTrack> = smf.tracks.iter()
-    .filter(|track| track_has_beat_event(track))
-    .map(|track| filter_beat_events(track, ppqn))
+    .filter(|track| !drum_channel || track_has_beat_event(track))
+    .map(|track| filter_beat_events(track, ppqn, drum_channel))
     .collect();
 
   println!("number of tracks after first filtering {:?}", tracks.iter().len());

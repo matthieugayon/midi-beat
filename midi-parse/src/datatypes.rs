@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use time_calc::TimeSig;
 
-use crate::map::{get_perc_map, RESOLUTION};
+use crate::map::{get_perc_map, RESOLUTION, NUMBER_OF_TRACKS};
 use crate::utils::{
   div_rem_usize,
   normalize_velocity,
@@ -83,7 +83,7 @@ impl DrumTrack {
     bar_tick_duration / RESOLUTION
   }
 
-  pub fn to_grid(&self, perc_map: &Vec<Option<u8>>) -> Vec<[[[f32; 2]; 10]; RESOLUTION]> {
+  pub fn to_grid(&self, perc_map: &Vec<Option<u8>>) -> Vec<[[[f32; 2]; NUMBER_OF_TRACKS]; RESOLUTION]> {
     let unwrapped_perc_map: Vec<u8> = perc_map
       .iter()
       .map(|option_key| match option_key {
@@ -111,7 +111,7 @@ impl DrumTrack {
     let grid_len = bars_number * RESOLUTION;
     
     // data structure to be filled from track events
-    let mut grid: Vec<[[f32; 2]; 10]> = vec![[[0., 0.]; 10]; grid_len];
+    let mut grid: Vec<[[f32; 2]; NUMBER_OF_TRACKS]> = vec![[[0., 0.]; NUMBER_OF_TRACKS]; grid_len];
 
     // parsing and filling the grid 
     self.events
@@ -201,8 +201,8 @@ impl DrumTrack {
 
     grid[..]
       .chunks_exact(RESOLUTION as usize)
-      .map(|chunk: &[[[f32; 2]; 10]]| {
-        let mut bar = [[[0. as f32; 2]; 10]; RESOLUTION];
+      .map(|chunk: &[[[f32; 2]; NUMBER_OF_TRACKS]]| {
+        let mut bar = [[[0. as f32; 2]; NUMBER_OF_TRACKS]; RESOLUTION];
         chunk
           .iter()
           .enumerate()

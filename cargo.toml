@@ -3,7 +3,7 @@
 members = [
   "parser-cli",
   "midi-parse",
-  "display-test",
+  # "display-test",
   "data-filter"
 ]
 

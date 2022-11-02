@@ -20,7 +20,7 @@ pub fn track_has_beat_event(track: &Vec<TrackEvent>) -> bool {
     })
 }
 
-pub fn filter_beat_events(track: &Vec<TrackEvent>, ppqn: u16) -> DrumTrack {
+pub fn filter_beat_events(track: &Vec<TrackEvent>, ppqn: u16, drum_channel: bool) -> DrumTrack {
     let mut delta_count: u32 = 0;
     let mut time_signature: (u8, u8, u8, u8) = (4, 4, 0, 0);
 
@@ -35,7 +35,8 @@ pub fn filter_beat_events(track: &Vec<TrackEvent>, ppqn: u16) -> DrumTrack {
 
             match e.kind {
                 TrackEventKind::Midi { channel, message } => {
-                    if channel.as_int() == 9 {
+                    if channel.as_int() == 9 || !drum_channel {
+                        // println!("XCHAN: {}", channel.as_int());
                         match message {
                             midly::MidiMessage::NoteOn { key, vel } => {
                                 if vel.as_int() > 0 {

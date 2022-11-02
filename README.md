@@ -16,8 +16,6 @@
 
 ## Snipps
 
-`cargo run --bin parser-cli --release -- -i "/Users/nunja2/Documents/Datasets/midi/e-gmd-v1.0.0/**/*.midi"  -o ~/Desktop/goog.npz`
-
 `cargo run --bin parser-cli --release -- -i "/Users/nunja2/Documents/Datasets/midi/GROSDRUM/**/*.mid"  -o ~/Desktop/reddit.npz`
 
 `cargo run --bin parser-cli --release -- -i "/Users/nunja2/Documents/Datasets/midi/BIGTURKISH/**/*.mid"  -o ~/Desktop/turk.npz`

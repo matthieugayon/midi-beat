@@ -10,13 +10,16 @@ use std::fs::File;
 
 use midi_parse::parse::filter_beat;
 use midi_parse::datatypes::DrumTrack;
-use midi_parse::stats::{fill_stats, display_stats, filter_densities};
+use midi_parse::stats::{fill_stats, display_stats, filter_densities, filter_gridicity};
 use midi_parse::map::process_track_pool;
 
 // parse args in a clean struct
 #[derive(Debug, StructOpt)]
 #[structopt(name = "parser-cli", about = "MIDI beat Dataset Builder")]
 struct Opt {
+    /// Filter on channel 9 only (drum GM midi)
+    #[structopt(short, long)]
+    drum_channel: bool,
     /// Input path
     #[structopt(short, long)]
     input: String,
@@ -47,6 +50,12 @@ fn main() {
     // track pool
     let mut track_pool: Vec<DrumTrack> = Vec::new();
 
+    if opt.drum_channel {
+        println!("Filter on Channel 10 only ....");
+    } else {
+        println!("No Channel filtering");
+    }
+
     println!("Reading files in : {}", opt.input);
 
     match glob_with(&opt.input, options) {
@@ -60,7 +69,7 @@ fn main() {
                         // Parse the raw bytes
                         match Smf::parse(&data) {
                             Ok(smf) => {
-                                let mut tracks = filter_beat(smf);
+                                let mut tracks = filter_beat(smf, opt.drum_channel);
                                 fill_stats(&tracks, count, &mut key_map, ts_count, &mut ts_map);
                                 track_pool.append(&mut tracks);
                             }
@@ -90,9 +99,21 @@ fn main() {
             // filter densities
             match filter_densities(&array) {
                 Ok(filtered) => {
-                    let mut npz = NpzWriter::new(File::create(opt.output.clone()).expect("Output path error"));
-                    npz.add_array("x", &filtered).expect("Can't write our array");
-                    println!("Successfully generated NPZ for path: '{}'", opt.output);
+                    // filter gridicity
+                    match filter_gridicity(&filtered) {
+                        Ok(filtered) => {
+                            // print filtered shape info
+                            println!("Filtered shape: {:?}", filtered.shape());
+
+                            let mut npz = NpzWriter::new(File::create(opt.output.clone()).expect("Output path error"));
+                            npz.add_array("x", &filtered).expect("Can't write our array");
+                            println!("Successfully generated NPZ for path: '{}'", opt.output);
+                        }
+                        Err(e) => {
+                            println!("Gridicity filtering error: {}", e);
+                        }
+                    }
+
                 }
                 Err(e) => {
                     println!("Shape error: {}", e);
