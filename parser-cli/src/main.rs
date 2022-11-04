@@ -13,6 +13,8 @@ use midi_parse::datatypes::DrumTrack;
 use midi_parse::stats::{fill_stats, display_stats, filter_densities, filter_gridicity};
 use midi_parse::map::process_track_pool;
 
+use ndarray::s;
+
 // parse args in a clean struct
 #[derive(Debug, StructOpt)]
 #[structopt(name = "parser-cli", about = "MIDI beat Dataset Builder")]
@@ -105,8 +107,11 @@ fn main() {
                             // print filtered shape info
                             println!("Filtered shape: {:?}", filtered.shape());
 
+                            // we must truncate the array on the axis 0 to max 2million
+                            let truncated = filtered.slice(s![..2000000, .., .., ..]);
+
                             let mut npz = NpzWriter::new(File::create(opt.output.clone()).expect("Output path error"));
-                            npz.add_array("x", &filtered).expect("Can't write our array");
+                            npz.add_array("x", &truncated).expect("Can't write our array");
                             println!("Successfully generated NPZ for path: '{}'", opt.output);
                         }
                         Err(e) => {

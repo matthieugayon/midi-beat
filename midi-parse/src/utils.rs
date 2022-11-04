@@ -82,14 +82,14 @@ pub fn filter_beat_events(track: &Vec<TrackEvent>, ppqn: u16, drum_channel: bool
     // scale according to timesig
     // 4/4 -> x1
     // 4/2 -> x2
-    let stretch = time_signature.0 / time_signature.1;
-    if stretch > 1 {
-      for evt in drum_events.iter_mut() {
-        evt.time *= stretch as u32;
-      };
+    if time_signature.1 > 0 {
+        let stretch = time_signature.0 / time_signature.1;
+        if stretch > 1 {
+          for evt in drum_events.iter_mut() {
+            evt.time *= stretch as u32;
+          };
+        }
     }
-
-    println!("stretch {:?}", stretch);
 
     DrumTrack {
         events: drum_events,
