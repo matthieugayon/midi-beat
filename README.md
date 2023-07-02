@@ -16,7 +16,7 @@
 
 ## Snipps
 
-`cargo run --bin parser-cli --release -- -i "/Users/nunja2/Documents/Datasets/midi/GROSDRUM/**/*.mid"  -o ~/Desktop/reddit.npz`
+`cargo run --bin parser-cli --release -- -i "/Users/nunja3/Documents/Datasets/midi/**/*.mid"  -o ~/Desktop/fattyfat.npz`
 
 `cargo run --bin parser-cli --release -- -i "/Users/nunja2/Documents/Datasets/midi/BIGTURKISH/**/*.mid"  -o ~/Desktop/turk.npz`
  

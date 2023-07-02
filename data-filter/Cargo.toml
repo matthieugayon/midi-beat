@@ -10,8 +10,8 @@ resolver = "2"
 [dependencies]
 rand = "0.8.5"
 kmeans = "0.2.0"
-ndarray = "0.13"
-ndarray-npy = "0.6.0"
+ndarray = "0.15.6"
+ndarray-npy = "0.8.1"
 structopt = { version = "0.3", default-features = false }
 
 [profile.dev]

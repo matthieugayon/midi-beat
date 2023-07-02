@@ -1,17 +1,16 @@
 use glob::glob_with;
+use glob::MatchOptions;
 use midly::Smf;
+use ndarray_npy::NpzWriter;
+use std::collections::BTreeMap;
+use std::fs::File;
 use std::{fs, time::Instant};
 use structopt::StructOpt;
-use std::collections::BTreeMap;
-use glob::MatchOptions;
-use ndarray_npy::NpzWriter;
-use std::fs::File;
 
-
-use midi_parse::parse::filter_beat;
 use midi_parse::datatypes::DrumTrack;
-use midi_parse::stats::{fill_stats, display_stats, filter_densities, filter_gridicity};
 use midi_parse::map::process_track_pool;
+use midi_parse::parse::filter_beat;
+use midi_parse::stats::{display_stats, fill_stats, filter_densities, filter_gridicity};
 
 use ndarray::s;
 
@@ -43,7 +42,7 @@ fn main() {
     let start = Instant::now();
     let mut counter: u32 = 0;
 
-    // for stats 
+    // for stats
     let mut key_map: BTreeMap<u8, u64> = BTreeMap::new();
     let mut ts_map: BTreeMap<(u8, u8, u8, u8), u64> = BTreeMap::new();
     let count: u64 = 1;
@@ -96,29 +95,33 @@ fn main() {
 
     match process_track_pool(&track_pool) {
         Ok(array) => {
-            println!("Successful cast of bars vec into Array4, shape: {:?}", array.shape());
+            println!(
+                "Successful cast of bars vec into Array4, shape: {:?}",
+                array.shape()
+            );
 
             // filter densities
             match filter_densities(&array) {
                 Ok(filtered) => {
-                    // filter gridicity
-                    match filter_gridicity(&filtered) {
-                        Ok(filtered) => {
-                            // print filtered shape info
-                            println!("Filtered shape: {:?}", filtered.shape());
+                    println!("Filtered shape: {:?}", filtered.shape());
+                    let size_limit = 2_000_000; // Adjust this as needed
+                    let num_chunks = (filtered.shape()[0] + size_limit - 1) / size_limit;
 
-                            // we must truncate the array on the axis 0 to max 2million
-                            let truncated = filtered.slice(s![..2000000, .., .., ..]);
+                    for i in 0..num_chunks {
+                        let start = i * size_limit;
+                        let end = start + size_limit.min(filtered.shape()[0] - start);
+                        let chunk = filtered.slice(s![start..end, .., .., ..]);
 
-                            let mut npz = NpzWriter::new(File::create(opt.output.clone()).expect("Output path error"));
-                            npz.add_array("x", &truncated).expect("Can't write our array");
-                            println!("Successfully generated NPZ for path: '{}'", opt.output);
-                        }
-                        Err(e) => {
-                            println!("Gridicity filtering error: {}", e);
-                        }
+                        let output_path = format!("{}_{}.npz", opt.output, i);
+
+                        let mut npz = NpzWriter::new_compressed(
+                            File::create(&output_path).expect("Output path error"),
+                        );
+
+                        npz.add_array("x", &chunk).expect("Can't write our array");
+
+                        println!("Successfully generated NPZ for path: '{}'", output_path);
                     }
-
                 }
                 Err(e) => {
                     println!("Shape error: {}", e);
@@ -135,4 +138,3 @@ fn main() {
 
     println!("Process lasted for {} ms", time);
 }
-

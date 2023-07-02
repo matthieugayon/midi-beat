@@ -84,7 +84,7 @@ pub fn filter_densities(bars_array: &Array<f32, Ix4>) -> Result<Array<f32, Ix4>,
         let vel_only = bar.slice(s![.., .., 0]);
         let density = vel_only.mean().unwrap();
 
-        if density > 0.01 && density < 0.3 { // 0.08 max for turkish, 0.16 for reddit
+        if density > 0.003 && density < 0.3 { 
 
             if density > highest_dens {
                 highest_dens = density;

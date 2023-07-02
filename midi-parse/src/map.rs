@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::datatypes::DrumTrack;
 use drawille::Canvas;
 use itertools::Itertools;
@@ -15,21 +17,85 @@ pub fn get_perc_map() -> [Vec<u8>; NUMBER_OF_TRACKS] {
         vec![37, 38, 39, 40],
 
         // TOMS
-        // vec![41, 45, 61, 64, 66],                       // low percs
-        vec![41, 45, 61, 64, 66],
-        // vec![47, 48, 60, 63],                               // mid percs
-        vec![47, 48, 60, 63, 58, 68, 77, 74, 78, 79],
-        // vec![43, 50, 54, 62, 65],                          // high percs
-        vec![43, 50, 54, 62, 65, 56, 67, 69, 71, 72, 70, 73, 75, 76, 81],
-
-        // vec![58, 68, 71, 72, 74, 75, 77, 78, 79],         // low percs misc
-        // vec![56, 67, 69, 70, 73, 76, 81],  // high percs misc
+        vec![41, 45, 61, 64, 66], // low tom
+        vec![47, 48, 58, 60, 63, 68, 74, 77, 78, 79], // mid tom
+        vec![43, 50, 54, 56, 62, 65, 67, 69, 70, 71, 72, 73, 75, 76, 81], // high tom
 
         // HH / CYMB
-        vec![42, 44],                 // muted hh
-        vec![46, 49, 55, 57],                 // open hat / splash / crash
-        vec![51, 52, 53, 59], // ride
+        vec![42, 44],  // muted hh
+        vec![46, 49, 55, 57], // open hat / splash / crash
+        vec![51, 52, 53, 59, 80], // ride
     ]
+}
+
+pub fn get_alt_reverse_perc_map() -> HashMap<u8, Vec<usize>> {
+    let mut rmap: HashMap<u8, Vec<usize>> = HashMap::new();
+
+    // kicks can go into the low perc group
+    rmap.insert(35, vec![2]);
+    rmap.insert(36, vec![2]);
+
+    // snares can go into the mid and high perc group
+    rmap.insert(37, vec![4, 3]);
+    rmap.insert(38, vec![4, 3]);
+    rmap.insert(39, vec![4, 3]);
+    rmap.insert(40, vec![4, 3]);
+
+    // low percs can go into the kick group, or mid and high perc group
+    rmap.insert(41, vec![0, 3, 4]);
+    rmap.insert(45, vec![0, 3, 4]);
+    rmap.insert(61, vec![0, 3, 4]);
+    rmap.insert(64, vec![0, 3, 4]);
+    rmap.insert(66, vec![0, 3, 4]);
+
+    // mid percs can go into the snare group, or low and high perc group
+    rmap.insert(47, vec![4, 2, 1]);
+    rmap.insert(48, vec![4, 2, 1]);
+    rmap.insert(58, vec![4, 2, 1]);
+    rmap.insert(60, vec![4, 2, 1]);
+    rmap.insert(63, vec![4, 2, 1]);
+    rmap.insert(68, vec![4, 2, 1]);
+    rmap.insert(74, vec![4, 2, 1]);
+    rmap.insert(77, vec![4, 2, 1]);
+    rmap.insert(78, vec![4, 2, 1]);
+    rmap.insert(79, vec![4, 2, 1]);
+
+    // high percs can go into the snare group, or low and mid perc group
+    rmap.insert(43, vec![3, 2, 1]);
+    rmap.insert(50, vec![3, 2, 1]);
+    rmap.insert(54, vec![3, 2, 1]);
+    rmap.insert(56, vec![3, 2, 1]);
+    rmap.insert(62, vec![3, 2, 1]);
+    rmap.insert(65, vec![3, 2, 1]);
+    rmap.insert(67, vec![3, 2, 1]);
+    rmap.insert(69, vec![3, 2, 1]);
+    rmap.insert(70, vec![3, 2, 1]);
+    rmap.insert(71, vec![3, 2, 1]);
+    rmap.insert(72, vec![3, 2, 1]);
+    rmap.insert(73, vec![3, 2, 1]);
+    rmap.insert(75, vec![3, 2, 1]);
+    rmap.insert(76, vec![3, 2, 1]);
+    rmap.insert(81, vec![3, 2, 1]);
+
+    // muted hh are flexible
+    rmap.insert(42, vec![6, 7, 4, 3, 1]);
+    rmap.insert(44, vec![6, 7, 4, 3, 1]);
+
+    // open hat / splash / crash are flexible
+    rmap.insert(46, vec![5, 7, 4, 3, 1]);
+    rmap.insert(49, vec![5, 7, 4, 3, 1]);
+    rmap.insert(55, vec![5, 7, 4, 3, 1]);
+    rmap.insert(57, vec![5, 7, 4, 3, 1]);
+
+    // ridoids is flexible
+    rmap.insert(51, vec![5, 6, 4, 3, 1]);
+    rmap.insert(52, vec![5, 6, 4, 3, 1]);
+    rmap.insert(53, vec![5, 6, 4, 3, 1]);
+    rmap.insert(59, vec![5, 6, 4, 3, 1]);
+    rmap.insert(80, vec![5, 6, 4, 3, 1]);
+
+
+    rmap
 }
 
 pub fn process_track_pool(track_pool: &Vec<DrumTrack>) -> Result<Array<f32, Ix4>, ShapeError> {
@@ -40,7 +106,7 @@ pub fn process_track_pool(track_pool: &Vec<DrumTrack>) -> Result<Array<f32, Ix4>
         })
         .map(|track| (track, track.get_track_perc_map()))
 
-        // filter tracks with less than 2 mapped percs
+        // filter tracks with less than 1 mapped percs
         .filter(|(_, track_perc_map)| {
             let percs_number = track_perc_map
                 .into_iter()
@@ -68,12 +134,12 @@ pub fn process_track_pool(track_pool: &Vec<DrumTrack>) -> Result<Array<f32, Ix4>
         // flatten everything into a vec of bars
         .flatten()
         .unique_by(|bar| {
-            let mut quantized_bar = [[[0 as isize; 2]; NUMBER_OF_TRACKS]; RESOLUTION];
+            let mut quantized_bar = [[0 as isize; NUMBER_OF_TRACKS]; RESOLUTION];
             bar.iter().enumerate().for_each(|(step_index, step)| {
                 step.iter().enumerate().for_each(|(perc_index, event)| {
                     // @TODO augment the quantization ??
                     quantized_bar[step_index][perc_index] =
-                        [(event[0] * 64.) as isize, (event[1] * 64.) as isize];
+                        (event[0] * 2.) as isize;
                 })
             });
             quantized_bar
