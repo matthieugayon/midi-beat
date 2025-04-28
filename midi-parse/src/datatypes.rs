@@ -89,6 +89,8 @@ impl DrumTrack {
         
         let alt_map = get_alt_reverse_perc_map();
 
+        let mut saved_keys = 0;
+
         // for each not_in_mapped key, find an alternative group in alt_map.
         // alt_map is an hash map, can be queried by key, it gives a vector of groups in order of preference.
         // then check if this group is free (index in mapped is None).
@@ -104,7 +106,7 @@ impl DrumTrack {
                     // Check if this group is free (index in mapped is None).
                     if let Some(slot) = mapped.get(*group) {
                         if slot.is_none() {
-                            println!("Found alternative group for key {} in group {}", key, group);
+                            saved_keys += 1;
                             // If the slot is free, assign it the key
                             mapped[*group] = Some(key);
                             break;
@@ -112,6 +114,10 @@ impl DrumTrack {
                     }
                 }
             }
+        }
+
+        if saved_keys > 0 {
+            println!("Saved {} keys", saved_keys);
         }
 
         mapped    
