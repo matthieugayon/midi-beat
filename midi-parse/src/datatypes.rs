@@ -2,13 +2,14 @@ use itertools::Itertools;
 use time_calc::TimeSig;
 
 use crate::map::{get_perc_map, NUMBER_OF_TRACKS, RESOLUTION, get_alt_reverse_perc_map};
-use crate::utils::{div_rem_usize, normalize_offset, normalize_velocity};
+use crate::utils::{div_rem_usize, normalize_offset, normalize_velocity, normalize_duration};
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Drum {
     pub time: u32,
     pub velocity: u8,
     pub key: u8,
+    pub duration: u32,
 }
 pub struct DrumTrack {
     pub events: Vec<Drum>,
@@ -142,7 +143,7 @@ impl DrumTrack {
     pub fn to_grid(
         &self,
         perc_map: &Vec<Option<u8>>,
-    ) -> Vec<[[[f32; 2]; NUMBER_OF_TRACKS]; RESOLUTION]> {
+    ) -> Vec<[[[f32; 3]; NUMBER_OF_TRACKS]; RESOLUTION]> {
         let unwrapped_perc_map: Vec<u8> = perc_map
             .iter()
             .map(|option_key| match option_key {
@@ -153,9 +154,8 @@ impl DrumTrack {
 
         // duration of a step (bar / RESOLUTION) in ticks
         let step_tick_duration = self.get_step_track_duration();
-        // minimum of distance between 2 events on a same step
-        // let's see if we need it or not
-        // let minimum_distance: f32 = 0.05;
+        // duration of a full bar in ticks
+        let bar_tick_duration = self.get_bar_track_duration() as u32;
 
         // last event of the track, since track is already sorted, this gives us the length of our grid vector
         let last_event: &Drum = self.events.last().unwrap();
@@ -171,8 +171,8 @@ impl DrumTrack {
         let grid_len = bars_number * RESOLUTION;
 
         // data structure to be filled from track events
-        let mut grid: Vec<[[f32; 2]; NUMBER_OF_TRACKS]> =
-            vec![[[0., 0.]; NUMBER_OF_TRACKS]; grid_len];
+        let mut grid: Vec<[[f32; 3]; NUMBER_OF_TRACKS]> =
+            vec![[[0., 0., 0.]; NUMBER_OF_TRACKS]; grid_len];
 
         // parsing and filling the grid
         self.events
@@ -185,9 +185,12 @@ impl DrumTrack {
                     .unwrap();
                 let (grid_index, offset) =
                     self.get_step_index_offset_tuple(drum, step_tick_duration);
+                
+                // Add normalized duration to event payload
                 let event_payload = [
                     normalize_velocity(drum.velocity as usize),
                     normalize_offset(offset as isize, step_tick_duration),
+                    normalize_duration(drum.duration, bar_tick_duration),
                 ];
 
                 if grid_index < grid_len - 1 {
@@ -197,22 +200,22 @@ impl DrumTrack {
                     if event_payload[1] > 0.5 {
                         match grid[grid_index + 1][perc_index] {
                             // there is no event on next step, we put event on next step with negative offset
-                            [next_vel, next_offset] if next_vel == 0. && next_offset == 0. => {
+                            [next_vel, next_offset, _next_dur] if next_vel == 0. && next_offset == 0. => {
                                 grid[grid_index + 1][perc_index] =
-                                    [event_payload[0], event_payload[1] - 1.]
+                                    [event_payload[0], event_payload[1] - 1., event_payload[2]]
                             }
-                            [next_vel, _next_offset] => {
+                            [next_vel, _next_offset, _next_dur] => {
                                 // there is an event on next step,
                                 match grid[grid_index][perc_index] {
                                     // so there is no event on current step, so we accept an offset > 0.5
-                                    [vel, offset] if vel == 0. && offset == 0. => {
+                                    [vel, offset, _dur] if vel == 0. && offset == 0. => {
                                         grid[grid_index][perc_index] = event_payload
                                     }
-                                    [vel, _offset] => {
+                                    [vel, _offset, _dur] => {
                                         // else we check if next event has a lower velocity
                                         if event_payload[0] > next_vel {
                                             grid[grid_index + 1][perc_index] =
-                                                [event_payload[0], event_payload[1] - 1.]
+                                                [event_payload[0], event_payload[1] - 1., event_payload[2]]
                                         } else if event_payload[0] > vel {
                                             // or if current event has a lower velocity
                                             grid[grid_index][perc_index] = event_payload
@@ -224,29 +227,28 @@ impl DrumTrack {
                     } else {
                         match grid[grid_index][perc_index] {
                             // there is no event on current step
-                            [vel, offset] if vel == 0. && offset == 0. => {
+                            [vel, offset, _dur] if vel == 0. && offset == 0. => {
                                 grid[grid_index][perc_index] = event_payload
                             }
-                            [vel, _offset] => {
+                            [vel, _offset, _dur] => {
                                 // there is an event on current step, let's check next step
                                 match grid[grid_index + 1][perc_index] {
                                     // there is nothing on next step
-                                    [next_vel, next_offset]
+                                    [next_vel, next_offset, _next_dur]
                                         if next_vel == 0. && next_offset == 0. =>
                                     {
                                         grid[grid_index + 1][perc_index] =
-                                            [event_payload[0], event_payload[1] - 1.]
+                                            [event_payload[0], event_payload[1] - 1., event_payload[2]]
                                     }
                                     // there is something so if velociy is higher we replace it
-                                    [next_vel, _next_offset] => {
+                                    [next_vel, _next_offset, _next_dur] => {
                                         if event_payload[0] > vel {
                                             // and at last, if velocity is higher than current step event, we replace it
-                                            grid[grid_index][perc_index] =
-                                                [event_payload[0], event_payload[1]]
+                                            grid[grid_index][perc_index] = event_payload
                                         } else if event_payload[0] > next_vel {
                                             // last case scenario we check if next event velocity is lower
                                             grid[grid_index + 1][perc_index] =
-                                                [event_payload[0], event_payload[1] - 1.]
+                                                [event_payload[0], event_payload[1] - 1., event_payload[2]]
                                         }
                                     }
                                 }
@@ -258,8 +260,8 @@ impl DrumTrack {
 
         grid[..]
             .chunks_exact(RESOLUTION as usize)
-            .map(|chunk: &[[[f32; 2]; NUMBER_OF_TRACKS]]| {
-                let mut bar = [[[0. as f32; 2]; NUMBER_OF_TRACKS]; RESOLUTION];
+            .map(|chunk: &[[[f32; 3]; NUMBER_OF_TRACKS]]| {
+                let mut bar = [[[0. as f32; 3]; NUMBER_OF_TRACKS]; RESOLUTION];
                 chunk.iter().enumerate().for_each(|(step_index, step)| {
                     step.iter().enumerate().for_each(|(perc_index, event)| {
                         bar[step_index][perc_index] = *event;
