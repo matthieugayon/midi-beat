@@ -99,7 +99,7 @@ pub fn get_alt_reverse_perc_map() -> HashMap<u8, Vec<usize>> {
 }
 
 pub fn process_track_pool(track_pool: &Vec<DrumTrack>) -> Result<Array<f32, Ix4>, ShapeError> {
-    let flattened_bars: Vec<[[[f32; 2]; NUMBER_OF_TRACKS]; RESOLUTION]> = track_pool
+    let flattened_bars: Vec<[[[f32; 3]; NUMBER_OF_TRACKS]; RESOLUTION]> = track_pool
         .into_iter()
         .map(|track| {
             return track;
@@ -161,7 +161,7 @@ pub fn process_track_pool(track_pool: &Vec<DrumTrack>) -> Result<Array<f32, Ix4>
         .map(|val| *val)
         .collect();
 
-    Array::from_shape_vec((number_of_bars, RESOLUTION, NUMBER_OF_TRACKS, 2), flattened_data)
+    Array::from_shape_vec((number_of_bars, RESOLUTION, NUMBER_OF_TRACKS, 3), flattened_data)
 }
 
 // old terminal display
@@ -190,31 +190,33 @@ fn draw_array(array: Array<f32, Ix4>) {
                 .for_each(|arr1: ArrayView<f32, Ix1>| {
                     match arr1.as_slice() {
                         Some(step) => {
-                            let offset = step[0];
-                            let velocity = step[1];
+                            let velocity = step[0];
+                            let offset = step[1];
+                            let duration = step[2];
                             let step_x = step_index * STEP_WIDTH + step_index / 4 * (PADDING * 2);
                             let step_y =
                                 bar_index * (BAR_HEIGHT + 20) + (perc_index + 1) * TRACK_HEIGHT;
                             let step_height = (STEP_HEIGHT as f32 * velocity) as u32;
                             let step_offset = ((STEP_WIDTH - 2 * PADDING) as f32 * offset) as u32;
+                            
+                            // Calculate width based on duration
+                            let step_width = ((STEP_WIDTH - 2 * PADDING) as f32 * duration) as u32;
+                            let step_width = step_width.max(1); // Ensure minimum width of 1
 
                             // draw step marker
                             canvas.set(step_x, step_y);
 
-                            // 2 lines wide
+                            // Draw notes with width based on duration
                             if velocity > 0. {
-                                canvas.line(
-                                    step_x + step_offset + PADDING,
-                                    step_y - step_height,
-                                    step_x + step_offset + PADDING,
-                                    step_y,
-                                );
-                                canvas.line(
-                                    step_x + step_offset + PADDING + 1,
-                                    step_y - step_height,
-                                    step_x + step_offset + PADDING + 1,
-                                    step_y,
-                                );
+                                // Draw a horizontal line with width proportional to duration
+                                for w in 0..step_width {
+                                    canvas.line(
+                                        step_x + step_offset + PADDING + w,
+                                        step_y - step_height,
+                                        step_x + step_offset + PADDING + w,
+                                        step_y,
+                                    );
+                                }
                             }
                         }
                         None => {
@@ -236,6 +238,6 @@ fn draw_array(array: Array<f32, Ix4>) {
 
 
 // has kick every beat filter
-fn has_kick_every_beat(patt: [[[f32; 2]; NUMBER_OF_TRACKS]; RESOLUTION]) -> bool {
+fn has_kick_every_beat(patt: [[[f32; 3]; NUMBER_OF_TRACKS]; RESOLUTION]) -> bool {
     false
 }
