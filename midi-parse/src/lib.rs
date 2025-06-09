@@ -53,6 +53,9 @@ mod tests {
         // Phase 5: Data integrity checks
         validate_array_data_integrity(&result_array);
         
+        // Phase 6: Specific content assertions
+        validate_specific_content(&result_array);
+        
         println!("✅ Full pipeline integration test completed successfully!");
         println!("Final array shape: {:?}", result_array.shape());
         
@@ -119,6 +122,62 @@ mod tests {
         println!("   - All velocities in range [0.0, 1.0]");
         println!("   - All offsets in range [-1.0, 1.0]");
         println!("   - All durations in range [0.0, 1.0]");
+    }
+    
+    fn validate_specific_content(array: &Array<f32, Ix4>) {
+        // Count events in first bar (bar index 0)
+        let mut first_bar_events = 0;
+        for step_idx in 0..array.shape()[1] {
+            for track_idx in 0..array.shape()[2] {
+                let velocity = array[[0, step_idx, track_idx, 0]];
+                if velocity > 0.0 {
+                    first_bar_events += 1;
+                }
+            }
+        }
+        
+        assert_eq!(first_bar_events, 9, 
+            "Expected 9 events in first bar, found {}", first_bar_events);
+        
+        println!("✅ First bar contains exactly 9 events");
+        
+        // Check second bar for specific duration values
+        let mut found_duration_1_0 = false;
+        let mut found_duration_0_75 = false;
+        let mut second_bar_events = 0;
+        
+        for step_idx in 0..array.shape()[1] {
+            for track_idx in 0..array.shape()[2] {
+                let velocity = array[[1, step_idx, track_idx, 0]];
+                let duration = array[[1, step_idx, track_idx, 2]];
+                
+                if velocity > 0.0 {
+                    second_bar_events += 1;
+                    
+                    // Check for duration == 1.0 (full bar duration)
+                    if (duration - 1.0).abs() < 0.001 {
+                        found_duration_1_0 = true;
+                        println!("   - Found event with duration 1.0 at step {}, track {}", step_idx, track_idx);
+                    }
+                    
+                    // Check for duration == 0.75 (3/4 bar duration)
+                    if (duration - 0.75).abs() < 0.001 {
+                        found_duration_0_75 = true;
+                        println!("   - Found event with duration 0.75 at step {}, track {}", step_idx, track_idx);
+                    }
+                }
+            }
+        }
+        
+        assert!(found_duration_1_0, 
+            "Expected to find at least one event with duration 1.0 in second bar");
+        assert!(found_duration_0_75, 
+            "Expected to find at least one event with duration 0.75 in second bar");
+        
+        println!("✅ Second bar validation passed");
+        println!("   - Found {} events in second bar", second_bar_events);
+        println!("   - Contains event with duration 1.0 (full bar)");
+        println!("   - Contains event with duration 0.75 (3/4 bar)");
     }
     
     #[test]
